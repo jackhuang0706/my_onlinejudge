@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:4000
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://user:password@postgres:5432/ojdb
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - JWT_SECRET=your_jwt_secret
+
+  judge:
+    build:
+      context: ./judge
+      dockerfile: Dockerfile
+    volumes:
+      - ./judge:/app
+      - /app/node_modules
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+
+  postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=ojdb
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data: 
